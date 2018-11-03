@@ -15,14 +15,21 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.samples.petclinic.visit.Visit;
 import org.springframework.samples.petclinic.visit.VisitRepository;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,16 +44,32 @@ class VisitController {
 
     private final VisitRepository visits;
     private final PetRepository pets;
+    private final VetRepository vets;
+    private final OwnerRepository owners;
+    public static int ownerid;
 
 
-    public VisitController(VisitRepository visits, PetRepository pets) {
+    public VisitController(VisitRepository visits, PetRepository pets, VetRepository vets, OwnerRepository owners) {
         this.visits = visits;
         this.pets = pets;
+        this.vets = vets;
+        this.owners = owners;
     }
 
     @InitBinder
     public void setAllowedFields(WebDataBinder dataBinder) {
         dataBinder.setDisallowedFields("id");
+    }
+    
+    @ModelAttribute("veterinarians")
+    public Collection<Vet> veters(){
+    	return this.vets.findAll();
+    }
+    
+    @ModelAttribute("pets")
+    public Collection<Pet> pets(@PathVariable("ownerId") int ownerId){
+    	ownerid = ownerId;
+    	return this.owners.findById(ownerId).getPets();
     }
 
     /**
@@ -69,7 +92,7 @@ class VisitController {
     }
 
     // Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is called
-    @GetMapping("/owners/*/pets/{petId}/visits/new")
+    @GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
     public String initNewVisitForm(@PathVariable("petId") int petId, Map<String, Object> model) {
         return "pets/createOrUpdateVisitForm";
     }
@@ -77,12 +100,39 @@ class VisitController {
     // Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is called
     @PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
     public String processNewVisitForm(@Valid Visit visit, BindingResult result) {
-        if (result.hasErrors()) {
+    	if (result.hasErrors()) {
             return "pets/createOrUpdateVisitForm";
         } else {
+        	visit.setState("ok");
             this.visits.save(visit);
             return "redirect:/owners/{ownerId}";
         }
     }
-
+    
+    @GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+    public String initUpdateVisitForm(@PathVariable("petId") int petId, @PathVariable("visitId") int visitId, ModelMap model) {
+    	Visit visit = this.visits.findById(visitId);
+    	model.put("visit",visit);
+    	return "pets/createOrUpdateVisitForm";
+    }
+    
+    @PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+    public String processUpdateVisitForm(@Valid Visit visit, BindingResult result, @PathVariable("visitId") int visitId) {
+    	visit.setId(visitId);
+    	visit.setState("ok");
+    	if (result.hasErrors()) {
+    		return "pets/createOrUpdateVisitForm";
+    	} else {
+    		this.visits.save(visit);
+    		return "redirect:/owners/{ownerId}";
+    	}
+    }
+    
+    @GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/cancel")
+    public String CancelToVisit(@PathVariable("visitId") int visitId) {
+    	Visit visit = this.visits.findById(visitId);
+    	visit.setState("cancel");
+    	this.visits.save(visit);
+    	return "redirect:/owners/{ownerId}";
+    }
 }

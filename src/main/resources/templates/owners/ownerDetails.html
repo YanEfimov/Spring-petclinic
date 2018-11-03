@@ -58,11 +58,28 @@
               <tr>
                 <th>Visit Date</th>
                 <th>Description</th>
+                <th>Veterinarian</th>
+                <th>Edit Visit</th>
+                <th>Cancel Vsit</th>
               </tr>
             </thead>
             <tr th:each="visit : ${pet.visits}">
+              <th:block th:if="${visit?.state=='ok'}"> 	
               <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
               <td th:text="${visit?.description}"></td>
+              <td th:text="${visit?.vet}"></td>
+              <td><a
+              	th:href="@{{ownerId}/pets/{petId}/visits/{visitId}/edit(ownerId=${owner.id},petId=${pet.id},visitId=${visit.id})}">Edit
+              	  Visit</a></td>
+              <td><a
+              	th:href="@{{ownerId}/pets/{petId}/visits/{visitId}/cancel(ownerId=${owner.id},petId=${pet.id},visitId=${visit.id})}">Cancel
+              	  Visit</a></td>
+              </th:block>
+              <th:block th:if="${visit?.state!='ok'}"> 	
+              <td style="color : gray;" th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+              <td style="color : gray;" th:text="${visit?.description}"></td>
+              <td style="color : gray;" th:text="${visit?.vet}"></td>
+              </th:block>
             </tr>
             <tr>
               <td><a
